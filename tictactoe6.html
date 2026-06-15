@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HARDCORE 8-BIT TIC-TAC-TOE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #1a1a2e;
+            --panel: #16213e;
+            --grid: #0f3460;
+            --text: #4cc9f0;
+            --accent: #f72585;
+            --x-color: #4cc9f0;
+            --o-color: #fee440;
+            --border: 4px solid #4cc9f0;
+        }
+
+        [data-theme="light"] {
+            --bg: #f8f9fa;
+            --panel: #e9ecef;
+            --grid: #dee2e6;
+            --text: #212529;
+            --accent: #d00000;
+            --x-color: #0077b6;
+            --o-color: #dc2f02;
+            --border: 4px solid #212529;
+        }
+
+        * { box-sizing: border-box; font-family: 'Press Start 2P', cursive; image-rendering: pixelated; }
+
+        body {
+            margin: 0; background-color: var(--bg); color: var(--text);
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden; transition: 0.3s;
+        }
+
+        /* Scanline Overlay */
+        body::after {
+            content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+            background-size: 100% 4px; z-index: 100; pointer-events: none;
+        }
+
+        .settings-btn {
+            position: fixed; top: 20px; right: 20px;
+            background: var(--panel); border: var(--border);
+            color: var(--text); padding: 10px; cursor: pointer; z-index: 101;
+            box-shadow: 4px 4px 0px #000; font-size: 10px;
+        }
+
+        .screen { display: flex; flex-direction: column; align-items: center; }
+        .hidden { display: none !important; }
+
+        .title { font-size: 32px; margin-bottom: 40px; animation: float 3s infinite ease-in-out; text-shadow: 4px 4px var(--accent); text-align: center; line-height: 1.5; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .btn {
+            background: var(--accent); color: white; border: none; padding: 15px 30px;
+            font-size: 12px; cursor: pointer; box-shadow: 6px 6px 0px #000; margin: 10px;
+            width: 250px;
+        }
+        .btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0px #000; }
+
+        .status { margin-bottom: 20px; font-size: 12px; height: 15px; letter-spacing: 2px; }
+
+        .board {
+            display: grid; grid-template-columns: repeat(3, 100px); grid-template-rows: repeat(3, 100px);
+            gap: 10px; background: var(--grid); padding: 10px; border: 8px solid var(--text);
+            box-shadow: 10px 10px 0px rgba(0,0,0,0.5);
+        }
+
+        .cell {
+            background: var(--panel); display: flex; justify-content: center; align-items: center;
+            font-size: 40px; cursor: pointer; transition: background 0.1s;
+            height: 100px; width: 100px;
+        }
+        .cell:hover { background: var(--bg); }
+
+        .cell.x::after { content: "X"; color: var(--x-color); animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .cell.o::after { content: "O"; color: var(--o-color); animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        @keyframes pop { from { transform: scale(0) rotate(-45deg); } to { transform: scale(1) rotate(0); } }
+
+        .modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 200;
+        }
+
+        .shake { animation: shake 0.2s; }
+        @keyframes shake { 0% { transform: translate(5px,5px); } 50% { transform: translate(-5px,-5px); } 100% { transform: translate(0,0); } }
+    </style>
+</head>
+<body>
+
+    <button class="settings-btn" onclick="toggleTheme()">⚙️ THEME</button>
+
+    <div id="menu" class="screen">
+        <h1 class="title">NEON<br>TIC-TAC-TOE</h1>
+        <p style="font-size: 10px; margin-bottom: 10px;">SELECT DIFFICULTY</p>
+        <button class="btn" onclick="start('easy')">EASY</button>
+        <button class="btn" onclick="start('medium')" style="background: #4361ee;">MEDIUM</button>
+        <button class="btn" onclick="start('hard')" style="background: #7209b7;">HARDCORE</button>
+    </div>
+
+    <div id="game" class="screen hidden">
+        <div id="status" class="status">YOUR TURN</div>
+        <div id="board" class="board">
+            <div class="cell" onclick="userMove(0)"></div><div class="cell" onclick="userMove(1)"></div><div class="cell" onclick="userMove(2)"></div>
+            <div class="cell" onclick="userMove(3)"></div><div class="cell" onclick="userMove(4)"></div><div class="cell" onclick="userMove(5)"></div>
+            <div class="cell" onclick="userMove(6)"></div><div class="cell" onclick="userMove(7)"></div><div class="cell" onclick="userMove(8)"></div>
+        </div>
+        <button class="btn" onclick="location.reload()" style="margin-top:30px; font-size:10px; background: #555; width: auto;">MAIN MENU</button>
+    </div>
+
+    <div id="modal" class="modal hidden">
+        <h2 id="msg" class="title">WINNER!</h2>
+        <button class="btn" onclick="resetGame()">PLAY AGAIN</button>
+        <button class="btn" onclick="location.reload()" style="background: #555;">MENU</button>
+    </div>
+
+    <script>
+        let board = ["","","","","","","","",""];
+        let isGameActive = true;
+        let difficulty = "hard";
+        const huPlayer = "x";
+        const aiPlayer = "o";
+        const winCombos = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+        // --- AUDIO ENGINE ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, type, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sounds = {
+            move: () => playSound(440, 'square', 0.1),
+            ai: () => playSound(330, 'square', 0.1),
+            win: () => { 
+                playSound(523, 'square', 0.1); 
+                setTimeout(() => playSound(659, 'square', 0.1), 100);
+                setTimeout(() => playSound(783, 'square', 0.3), 200);
+            },
+            lose: () => {
+                playSound(200, 'sawtooth', 0.2);
+                setTimeout(() => playSound(150, 'sawtooth', 0.4), 200);
+            },
+            draw: () => playSound(150, 'triangle', 0.3)
+        };
+
+        // --- GAME LOGIC ---
+        function toggleTheme() {
+            const h = document.documentElement;
+            h.setAttribute('data-theme', h.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+            sounds.move();
+        }
+
+        function start(level) {
+            difficulty = level;
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('game').classList.remove('hidden');
+            sounds.move();
+        }
+
+        function userMove(index) {
+            if (board[index] === "" && isGameActive) {
+                executeMove(index, huPlayer);
+                sounds.move();
+                
+                if (!checkWin(board, huPlayer) && !checkTie()) {
+                    isGameActive = false;
+                    document.getElementById('status').innerText = "CPU THINKING...";
+                    setTimeout(() => {
+                        let aiIndex;
+                        const available = board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+
+                        if (difficulty === 'easy') {
+                            aiIndex = available[Math.floor(Math.random() * available.length)];
+                        } else if (difficulty === 'medium') {
+                            aiIndex = Math.random() > 0.5 ? minimax(board, aiPlayer).index : available[Math.floor(Math.random() * available.length)];
+                        } else {
+                            aiIndex = minimax(board, aiPlayer).index;
+                        }
+
+                        executeMove(aiIndex, aiPlayer);
+                        sounds.ai();
+
+                        if (checkWin(board, aiPlayer)) {
+                            endGame("CPU WINS!");
+                            sounds.lose();
+                        } else if (checkTie()) {
+                            endGame("Draw!");
+                            sounds.draw();
+                        } else {
+                            isGameActive = true;
+                            document.getElementById('status').innerText = "YOUR TURN";
+                        }
+                    }, 500);
+                } else if (checkWin(board, huPlayer)) {
+                    endGame("You Win!");
+                    sounds.win();
+                } else if (checkTie()) {
+                    endGame("Draw!");
+                    sounds.draw();
+                }
+            }
+        }
+
+        function executeMove(index, player) {
+            board[index] = player;
+            const cells = document.querySelectorAll('.cell');
+            cells[index].classList.add(player);
+            document.getElementById('board').classList.add('shake');
+            setTimeout(() => document.getElementById('board').classList.remove('shake'), 200);
+        }
+
+        function resetGame() {
+            board = ["","","","","","","","",""];
+            isGameActive = true;
+            document.getElementById('status').innerText = "YOUR TURN";
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('x', 'o'));
+            document.getElementById('modal').classList.add('hidden');
+            sounds.move();
+        }
+
+        function endGame(msg) {
+            document.getElementById('msg').innerText = msg;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        // --- MINIMAX ALGORITHM ---
+        function checkWin(board, player) {
+            return winCombos.some(combo => combo.every(i => board[i] === player));
+        }
+
+        function checkTie() {
+            return board.every(s => s !== "");
+        }
+
+        function minimax(newBoard, player) {
+            let availSpots = newBoard.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+
+            if (checkWin(newBoard, huPlayer)) return {score: -10};
+            if (checkWin(newBoard, aiPlayer)) return {score: 10};
+            if (availSpots.length === 0) return {score: 0};
+
+            let moves = [];
+            for (let i = 0; i < availSpots.length; i++) {
+                let move = {};
+                move.index = availSpots[i];
+                newBoard[availSpots[i]] = player;
+
+                if (player === aiPlayer) {
+                    move.score = minimax(newBoard, huPlayer).score;
+                } else {
+                    move.score = minimax(newBoard, aiPlayer).score;
+                }
+
+                newBoard[availSpots[i]] = "";
+                moves.push(move);
+            }
+
+            let bestMove;
+            if (player === aiPlayer) {
+                let bestScore = -10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score > bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            } else {
+                let bestScore = 10000;
+                for (let i = 0; i < moves.length; i++) {
+                    if (moves[i].score < bestScore) {
+                        bestScore = moves[i].score;
+                        bestMove = i;
+                    }
+                }
+            }
+            return moves[bestMove];
+        }
+    </script>
+</body>
+</html>
