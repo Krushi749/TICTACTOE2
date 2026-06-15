@@ -58,7 +58,8 @@
 
         .btn {
             background: var(--accent); color: white; border: none; padding: 15px 30px;
-            font-size: 14px; cursor: pointer; box-shadow: 6px 6px 0px #000; margin: 10px;
+            font-size: 12px; cursor: pointer; box-shadow: 6px 6px 0px #000; margin: 10px;
+            width: 250px;
         }
         .btn:active { transform: translate(3px, 3px); box-shadow: 2px 2px 0px #000; }
 
@@ -73,6 +74,7 @@
         .cell {
             background: var(--panel); display: flex; justify-content: center; align-items: center;
             font-size: 40px; cursor: pointer; transition: background 0.1s;
+            height: 100px; width: 100px;
         }
         .cell:hover { background: var(--bg); }
 
@@ -97,8 +99,10 @@
 
     <div id="menu" class="screen">
         <h1 class="title">NEON<br>TIC-TAC-TOE</h1>
-        <p style="font-size: 10px; margin-bottom: 20px;">DIFFICULTY: IMPOSSIBLE</p>
-        <button class="btn" onclick="start()">START GAME</button>
+        <p style="font-size: 10px; margin-bottom: 10px;">SELECT DIFFICULTY</p>
+        <button class="btn" onclick="start('easy')">EASY</button>
+        <button class="btn" onclick="start('medium')" style="background: #4361ee;">MEDIUM</button>
+        <button class="btn" onclick="start('hard')" style="background: #7209b7;">HARDCORE</button>
     </div>
 
     <div id="game" class="screen hidden">
@@ -108,17 +112,19 @@
             <div class="cell" onclick="userMove(3)"></div><div class="cell" onclick="userMove(4)"></div><div class="cell" onclick="userMove(5)"></div>
             <div class="cell" onclick="userMove(6)"></div><div class="cell" onclick="userMove(7)"></div><div class="cell" onclick="userMove(8)"></div>
         </div>
-        <button class="btn" onclick="resetGame()" style="margin-top:30px; font-size:10px; background: #555;">RESTART</button>
+        <button class="btn" onclick="location.reload()" style="margin-top:30px; font-size:10px; background: #555; width: auto;">MAIN MENU</button>
     </div>
 
     <div id="modal" class="modal hidden">
         <h2 id="msg" class="title">WINNER!</h2>
         <button class="btn" onclick="resetGame()">PLAY AGAIN</button>
+        <button class="btn" onclick="location.reload()" style="background: #555;">MENU</button>
     </div>
 
     <script>
         let board = ["","","","","","","","",""];
         let isGameActive = true;
+        let difficulty = "hard";
         const huPlayer = "x";
         const aiPlayer = "o";
         const winCombos = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
@@ -160,7 +166,8 @@
             sounds.move();
         }
 
-        function start() {
+        function start(level) {
+            difficulty = level;
             if (audioCtx.state === 'suspended') audioCtx.resume();
             document.getElementById('menu').classList.add('hidden');
             document.getElementById('game').classList.remove('hidden');
@@ -176,14 +183,25 @@
                     isGameActive = false;
                     document.getElementById('status').innerText = "CPU THINKING...";
                     setTimeout(() => {
-                        const bestSpot = minimax(board, aiPlayer).index;
-                        executeMove(bestSpot, aiPlayer);
+                        let aiIndex;
+                        const available = board.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+
+                        if (difficulty === 'easy') {
+                            aiIndex = available[Math.floor(Math.random() * available.length)];
+                        } else if (difficulty === 'medium') {
+                            aiIndex = Math.random() > 0.5 ? minimax(board, aiPlayer).index : available[Math.floor(Math.random() * available.length)];
+                        } else {
+                            aiIndex = minimax(board, aiPlayer).index;
+                        }
+
+                        executeMove(aiIndex, aiPlayer);
                         sounds.ai();
+
                         if (checkWin(board, aiPlayer)) {
                             endGame("CPU WINS!");
                             sounds.lose();
                         } else if (checkTie()) {
-                            endGame("IT'S A DRAW");
+                            endGame("Draw!");
                             sounds.draw();
                         } else {
                             isGameActive = true;
@@ -191,10 +209,10 @@
                         }
                     }, 500);
                 } else if (checkWin(board, huPlayer)) {
-                    endGame("YOU WIN?!"); // Technically impossible with minimax
+                    endGame("You Win!");
                     sounds.win();
                 } else if (checkTie()) {
-                    endGame("IT'S A DRAW");
+                    endGame("Draw!");
                     sounds.draw();
                 }
             }
@@ -222,7 +240,7 @@
             document.getElementById('modal').classList.remove('hidden');
         }
 
-        // --- MINIMAX ALGORITHM (The "Hard" Part) ---
+        // --- MINIMAX ALGORITHM ---
         function checkWin(board, player) {
             return winCombos.some(combo => combo.every(i => board[i] === player));
         }
